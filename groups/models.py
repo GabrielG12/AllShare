@@ -15,10 +15,17 @@ class Group(models.Model):
 
 
 class Event(models.Model):
+    event_types = [
+        ("Gas", "Gas"),
+        ("Bills", "Bills"),
+        ("Groceries", "Groceries"),
+        ("Parking", "Parking"),
+        ("Dinning/Going out", "Dinning/Going out"),
+    ]
 
-    group_name = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='events', null=False)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='events', null=False)
     event_name = models.CharField(max_length=255, null=False)
-    event_type = models.CharField(max_length=255, null=False)
+    event_type = models.CharField(max_length=255, choices=event_types, null=False)
     paid_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='paid_events')
     date_created = models.DateTimeField(auto_now_add=True, null=False)
 

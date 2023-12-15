@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import GroupCreateView
+from .views import GroupCreateView, EventCreateView
 
 urlpatterns = [
-    path('group/create/', GroupCreateView.as_view(), name='create-group'),
+    path('create/', GroupCreateView.as_view(), name='create-group'),
+    path('events/create/', EventCreateView.as_view(), name='create-event'),
 ]
 
