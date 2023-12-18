@@ -1,9 +1,25 @@
 from rest_framework import serializers
 from .models import Group, Event
 from django.contrib.auth import get_user_model
-
+from django.core.exceptions import ObjectDoesNotExist
 
 User = get_user_model()
+
+
+class GetUserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
+
+    class Meta:
+        model = User
+        fields = ['username']
+
+
+class GetGroupSerializer(serializers.ModelSerializer):
+    group_name = serializers.CharField()
+
+    class Meta:
+        model = Group
+        fields = ['group_name']
 
 
 class GroupCreateSerializer(serializers.ModelSerializer):
@@ -68,41 +84,40 @@ class GroupUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-class GroupGetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ['group_name']
-
-
 class EventCreateSerializer(serializers.ModelSerializer):
-    group = GroupGetSerializer(write_only=True)
+    group = GetGroupSerializer(write_only=True)
+    paid_by = GetUserSerializer(write_only=True)
 
     class Meta:
         model = Event
-        fields = ['id', 'group', 'event_name', 'event_type', 'paid_by', 'date_created']
+        fields = ['id', 'group', 'event_name', 'event_type', 'paid_by', 'amount', 'date_created']
         read_only_fields = ['id', 'date_created']
 
     def create(self, validated_data):
-        group_data = validated_data.pop('group', {})
-        members = validated_data.pop('members', [])
-        paid_by = validated_data.pop('paid_by', None)
-
-        # Create the Event instance without the group information
-        instance = Event.objects.create(**validated_data)
+        group_data = validated_data.pop('group', None)
+        paid_by_data = validated_data.pop('paid_by', None)
 
         group_name = group_data.get('group_name', None)
-        group_exists = Group.objects.filter(group_name=group_name).exists()
+        if group_name:
+            try:
+                group = Group.objects.get(group_name=group_name)
 
-        if group_exists:
-            # Check if the paid_by user is a member of the group
-            group = Group.objects.get(group_name=group_name)
-            if paid_by in group.members.all():
-                instance.group = group
-                instance.paid_by = paid_by
-                instance.save()
-            else:
-                raise serializers.ValidationError(f"The user is not a member of the group.")
+                if group:
+                    # Retrieve user if it exists
+                    username = paid_by_data.get('username', None)
+                    user = User.objects.filter(username=username).first()
+
+                    if user:
+                        if user in group.members.all():
+                            instance = Event.objects.create(group=group, paid_by=user, **validated_data)
+                            return instance
+                        else:
+                            raise serializers.ValidationError("The user is not a member of the group.")
+                    else:
+                        raise serializers.ValidationError(f"User with username '{username}' does not exist.")
+                else:
+                    raise serializers.ValidationError("This group does not exist or you're not a member.")
+            except ObjectDoesNotExist:
+                raise serializers.ValidationError("This group does not exist or you're not a member.")
         else:
-            raise serializers.ValidationError(f"Group with name '{group_name}' does not exist.")
-
-        return instance
+            raise serializers.ValidationError("Group name is required.")

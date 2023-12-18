@@ -27,6 +27,7 @@ class Event(models.Model):
     event_name = models.CharField(max_length=255, null=False)
     event_type = models.CharField(max_length=255, choices=event_types, null=False)
     paid_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='paid_events')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     date_created = models.DateTimeField(auto_now_add=True, null=False)
 
     def __str__(self):
