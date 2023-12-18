@@ -15,6 +15,7 @@ class Group(models.Model):
 
 
 class Event(models.Model):
+
     event_types = [
         ("Gas", "Gas"),
         ("Bills", "Bills"),
