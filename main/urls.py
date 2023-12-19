@@ -5,5 +5,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include("accounts.urls")),
     path('groups/', include("groups.urls")),
-    #path('groups/group_statistics/', include("group_statistics.urls")),
+    path('groups/statistics/', include("group_statistics.urls")),
 ]

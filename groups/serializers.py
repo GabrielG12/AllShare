@@ -94,6 +94,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'date_created']
 
     def create(self, validated_data):
+
         group_data = validated_data.pop('group', None)
         paid_by_data = validated_data.pop('paid_by', None)
 
