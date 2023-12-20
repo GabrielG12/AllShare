@@ -1,27 +1,28 @@
 from rest_framework import serializers
 from groups.models import Group
 from django.contrib.auth import get_user_model
-from .models import GroupStatistics
+from datetime import datetime
 
 User = get_user_model()
 
 
 class GetGroupSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Group
         fields = ['group_name', 'members', 'date_created']
 
 
-class GetGroupBasicStatisticsSerializer(serializers.ModelSerializer):
-
+class GetGroupBasicStatisticsSerializer(serializers.Serializer):
     number_of_members = serializers.IntegerField()
     accumulated_amount_paid = serializers.DecimalField(max_digits=1000, decimal_places=2, )
     accumulated_amount_paid_by_users = serializers.CharField(max_length=1000)
+    owing = serializers.CharField(max_length=1000)
 
-    class Meta:
-        model = GroupStatistics
-        fields = ['number_of_members', 'accumulated_amount_paid', 'accumulated_amount_paid_by_users']
+
+class GetGroupFilteredStatisticsSerializer(serializers.Serializer):
+
+    year = serializers.IntegerField()
+    every_month_per_year_stats = serializers.CharField(max_length=1000000000000)
 
 
 """
