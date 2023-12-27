@@ -2,8 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Group
-from .serializers import GetGroupBasicStatisticsSerializer, GetGroupFilteredStatisticsSerializer
+from .models import Group, Event
+from .serializers import GetGroupBasicStatisticsSerializer, GetGroupMonthStatisticsSerializer, \
+    GetGroupMonthPerYearStatisticsSerializer
 from rest_framework_simplejwt.tokens import AccessToken
 from django.contrib.auth import get_user_model
 
@@ -103,16 +104,13 @@ class GroupBasicStatisticsAPIView(APIView):
             return Response({'Error': 'This group does not exist!'}, status=status.HTTP_404_NOT_FOUND)
 
 
-#TODO: Filtering stats
+# TODO: Filtering total stats per month
 
-class PerMonthGroupStatisticsView(APIView):
-
+class GroupMonthStatisticsView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, group_name, year, month):
 
-        year = request.data.get('year')
-        group_name = request.data.get("group")
         group = Group.objects.get(group_name=group_name)
 
         auth_header = request.headers["Authorization"]
@@ -134,21 +132,154 @@ class PerMonthGroupStatisticsView(APIView):
             token_username = None
         token_username = token_username.strip()
 
-        report = {}
         if token_username is not None and token_username in group_members:
-            months = {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
-            for number, month in months.items():
-                monthly_dataset = group.events.filter(date_create__year=year, date_create__month=number)
-                monthly_report = {}
-                for type in group.event_type:
-                    type_amounts = [type.amount for type in monthly_dataset.get(event_type=type)]
-                    type_sum_month = sum(type_amounts)
+            months = {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August",
+                      9: "September", 10: "October", 11: "November", 12: "December"}
+
+            report = {}
+            monthly_dataset = Event.objects.filter(group=group, date_created__year=year,
+                                                   date_created__month=month)
+            month_report = {}
+            event_types = [event.event_type for event in monthly_dataset]
+            for event_type in event_types:
+                month_event_report = {}
+                event_dataset = monthly_dataset.filter(event_type=event_type)
+                particular_event_amount = [float(event.amount) for event in event_dataset]
+                type_amounts_sum_month = sum(particular_event_amount)
+                month_event_report[f"{event_type}"] = type_amounts_sum_month
+                month_report.update(month_event_report)
+
+            serializer = GetGroupMonthStatisticsSerializer(data={"monthly_report": month_report})
+            serializer.is_valid()
+            response_data = {f"{months[month]}": serializer.data["monthly_report"]}
+
+            return Response(data=response_data, status=status.HTTP_200_OK)
 
 
+# TODO: Filtering total stats per month in a year
+class GroupMonthPerYearStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, group_name, year):
+
+        group = Group.objects.get(group_name=group_name)
+
+        auth_header = request.headers["Authorization"]
+        token_string = auth_header.split(" ")[1]
+        token = AccessToken(token_string)
+
+        # Print the entire token payload
+        token_payload = token.payload
+
+        # Extract the user_id from the token payload
+        user_id = token.payload.get("user_id")
+
+        group_members = [member.username for member in group.members.all()]
+
+        try:
+            user = User.objects.get(id=user_id)
+            token_username = user.username
+        except User.DoesNotExist:
+            token_username = None
+        token_username = token_username.strip()
+
+        if token_username is not None and token_username in group_members:
+            months = {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August",
+                      9: "September", 10: "October", 11: "November", 12: "December"}
+
+            report = {}
+            # Get the dataset for the year provided in the url
+            yearly_dataset = Event.objects.filter(group=group, date_created__year=year)
+            year_report = {}
+
+            # Filter the dataset for monthly check
+            for month_number, month_name in months.items():
+                monthly_dataset = yearly_dataset.filter(date_created__month=int(month_number))
+                # Get all the event types paid for in the looped month
+                event_types = [event.event_type for event in monthly_dataset]
+
+                month_report = {}
+                # Get the amount paid for every event type in the month
+                for event_type in event_types:
+                    month_event_report = {}
+                    event_dataset = monthly_dataset.filter(event_type=event_type)
+                    particular_event_amount = [float(event.amount) for event in event_dataset]
+                    type_amounts_sum_month = sum(particular_event_amount)
+                    month_event_report[f"{event_type}"] = type_amounts_sum_month
+                    month_report.update(month_event_report)
+
+                # Use setdefault to create an empty dictionary if the month_name key doesn't exist
+                if month_name not in year_report:
+                    year_report[month_name] = {}
+                year_report[month_name].update(month_report)
+
+            serializer = GetGroupMonthPerYearStatisticsSerializer(data={"year_report": year_report})
+            serializer.is_valid()
+            response_data = {f"{year}": serializer.data["year_report"]}
+
+            return Response(data=response_data, status=status.HTTP_200_OK)
 
 
+# TODO: Filtering every event in a group
 
+class GroupEveryEventView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, group_name, year):
 
+        group = Group.objects.get(group_name=group_name)
 
+        auth_header = request.headers["Authorization"]
+        token_string = auth_header.split(" ")[1]
+        token = AccessToken(token_string)
 
+        # Print the entire token payload
+        token_payload = token.payload
+
+        # Extract the user_id from the token payload
+        user_id = token.payload.get("user_id")
+
+        group_members = [member.username for member in group.members.all()]
+
+        try:
+            user = User.objects.get(id=user_id)
+            token_username = user.username
+        except User.DoesNotExist:
+            token_username = None
+        token_username = token_username.strip()
+
+        if token_username is not None and token_username in group_members:
+            months = {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August",
+                      9: "September", 10: "October", 11: "November", 12: "December"}
+
+            report = {}
+            # Get the dataset for the year provided in the url
+            yearly_dataset = Event.objects.filter(group=group, date_created__year=year)
+            year_report = {}
+
+            # Filter the dataset for monthly check
+            for month_number, month_name in months.items():
+                monthly_dataset = yearly_dataset.filter(date_created__month=int(month_number))
+                # Get all the event types paid for in the looped month
+                event_types = [event.event_type for event in monthly_dataset]
+
+                month_report = {}
+                # Get the amount paid for every event type in the month
+                for event_type in event_types:
+                    month_event_report = {}
+                    event_dataset = monthly_dataset.filter(event_type=event_type)
+                    particular_event_amount = [float(event.amount) for event in event_dataset]
+                    type_amounts_sum_month = sum(particular_event_amount)
+                    month_event_report[f"{event_type}"] = type_amounts_sum_month
+                    month_report.update(month_event_report)
+
+                # Use setdefault to create an empty dictionary if the month_name key doesn't exist
+                if month_name not in year_report:
+                    year_report[month_name] = {}
+                year_report[month_name].update(month_report)
+
+            serializer = GetGroupMonthPerYearStatisticsSerializer(data={"year_report": year_report})
+            serializer.is_valid()
+            response_data = {f"{year}": serializer.data["year_report"]}
+
+            return Response(data=response_data, status=status.HTTP_200_OK)

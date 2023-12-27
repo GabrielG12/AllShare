@@ -18,7 +18,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ["group", "event_name", "paid_by", "get_amount", "date_created"]
+    list_display = ["group", "event_name", "event_type", "paid_by", "get_amount", "date_created"]
     ordering = ["event_name"]
 
     def get_amount(self, obj):

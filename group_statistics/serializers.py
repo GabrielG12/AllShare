@@ -19,10 +19,14 @@ class GetGroupBasicStatisticsSerializer(serializers.Serializer):
     owing = serializers.CharField(max_length=1000)
 
 
-class GetGroupFilteredStatisticsSerializer(serializers.Serializer):
+class GetGroupMonthStatisticsSerializer(serializers.Serializer):
 
-    year = serializers.IntegerField()
-    every_month_per_year_stats = serializers.CharField(max_length=1000000000000)
+    monthly_report = serializers.CharField()
+
+
+class GetGroupMonthPerYearStatisticsSerializer(serializers.Serializer):
+
+    year_report = serializers.CharField(max_length=100000000000)
 
 
 """

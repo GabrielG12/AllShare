@@ -122,3 +122,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("This group does not exist or you're not a member.")
         else:
             raise serializers.ValidationError("Group name is required.")
+
+
+class GetGroupEventsSerializer(serializers.Serializer):
+    events = serializers.DictField()

@@ -1,6 +1,7 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import datetime
 
 
 class CustomUserManager(BaseUserManager):
@@ -37,10 +38,15 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractUser):
     email = models.EmailField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
-    date_joined = models.DateTimeField(auto_now_add=True)
+    date_created = models.DateField(null=False, blank=True)
     objects = CustomUserManager()
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
+
+    def save(self, *args, **kwargs):
+        if not self.date_created:
+            self.date_created = datetime.date.today()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username

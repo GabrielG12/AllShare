@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'groups',
     'group_statistics',
     'rest_framework',
+    'corsheaders',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
 ]
@@ -42,6 +43,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'main.urls'
@@ -58,6 +60,8 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",)
 }
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 
 SIMPLE_JWT = {
